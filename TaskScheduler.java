@@ -7,6 +7,9 @@ public class TaskScheduler {
         boolean validInput = true;  // Flag for valid input format
         int count = 0;
 
+        Mode2[] jobsMode2 = new Mode2[10];  // Use for Mode2 jobs
+        Mode3[] jobsMode3 = new Mode3[10];  // Use for Mode3 jobs
+
         // Read the first line from StdIn
         if (!StdIn.isEmpty()) {
             String firstLine = StdIn.readLine().trim();
@@ -20,28 +23,21 @@ public class TaskScheduler {
                 processMode1(heap1, firstLineParts);  // Process Mode1 jobs directly
 
             } else if (numElements == 3) {
-                // Initialize a temporary storage for jobs to process later
-                Mode1[] jobs = new Mode1[10];  // Start with a small array
-
-                // Store the first job and check if it's Mode2 or Mode3
+                // Process the first job for Task 2 or Mode3
                 int jobId = Integer.parseInt(firstLineParts[0].trim());
                 int processingTime = Integer.parseInt(firstLineParts[1].trim());
                 int thirdValue = Integer.parseInt(firstLineParts[2].trim());
 
-                // If any third value is greater than 20, it's Mode3 (arrival time)
-                if (thirdValue > 20) {
+                // If any third value is greater than or equal to 20, it's Mode3 (arrival time)
+                if (thirdValue >= 20) {
                     isMode3 = true;
-                }
-
-                // Store the job in the array (as Mode2 or Mode3 based on thirdValue)
-                if (isMode3) {
-                    jobs[count] = new Mode3(jobId, processingTime, thirdValue);  // Mode3 job
+                    jobsMode3[count] = new Mode3(jobId, processingTime, thirdValue);  // Store as Mode3 job
                 } else {
-                    jobs[count] = new Mode2(jobId, processingTime, thirdValue);  // Mode2 job
+                    jobsMode2[count] = new Mode2(jobId, processingTime, thirdValue);  // Store as Mode2 job
                 }
                 count++;
 
-                // Read the rest of the lines to determine if it's Mode2 or Mode3
+                // Read the rest of the jobs and store them in the respective jobs array
                 while (!StdIn.isEmpty()) {
                     String line = StdIn.readLine().trim();
                     if (line.isEmpty()) continue;
@@ -58,23 +54,26 @@ public class TaskScheduler {
                     processingTime = Integer.parseInt(parts[1].trim());
                     thirdValue = Integer.parseInt(parts[2].trim());
 
-                    // If any third value is greater than 20, it's Mode3 (arrival time)
-                    if (thirdValue > 20) {
+                    // If any third value is greater than or equal to 20, it's Mode3 (arrival time)
+                    if (thirdValue >= 20) {
                         isMode3 = true;
                     }
 
-                    // Resize the array if necessary
-                    if (count == jobs.length) {
-                        Mode1[] newJobs = new Mode1[jobs.length * 2];  // Double the size
-                        System.arraycopy(jobs, 0, newJobs, 0, jobs.length);
-                        jobs = newJobs;
-                    }
-
-                    // Store the job in the array (as Mode2 or Mode3 based on thirdValue)
+                    // Resize the arrays if necessary
                     if (isMode3) {
-                        jobs[count] = new Mode3(jobId, processingTime, thirdValue);  // Mode3 job
+                        if (count == jobsMode3.length) {
+                            Mode3[] newJobsMode3 = new Mode3[jobsMode3.length * 2];  // Double the size
+                            System.arraycopy(jobsMode3, 0, newJobsMode3, 0, jobsMode3.length);
+                            jobsMode3 = newJobsMode3;
+                        }
+                        jobsMode3[count] = new Mode3(jobId, processingTime, thirdValue);  // Store as Mode3 job
                     } else {
-                        jobs[count] = new Mode2(jobId, processingTime, thirdValue);  // Mode2 job
+                        if (count == jobsMode2.length) {
+                            Mode2[] newJobsMode2 = new Mode2[jobsMode2.length * 2];  // Double the size
+                            System.arraycopy(jobsMode2, 0, newJobsMode2, 0, jobsMode2.length);
+                            jobsMode2 = newJobsMode2;
+                        }
+                        jobsMode2[count] = new Mode2(jobId, processingTime, thirdValue);  // Store as Mode2 job
                     }
                     count++;
                 }
@@ -83,10 +82,10 @@ public class TaskScheduler {
                 if (validInput) {
                     if (isMode3) {
                         heap3 = new MinHeap3(count);  // Create a heap for Mode3
-                        processMode3(heap3, jobs, count);  // Process Mode3 jobs
+                        processMode3(heap3, jobsMode3, count);  // Process Mode3 jobs
                     } else {
                         heap2 = new MinHeap2(count);  // Create a heap for Mode2
-                        processMode2(heap2, jobs, count);  // Process Mode2 jobs
+                        processMode2(heap2, jobsMode2, count);  // Process Mode2 jobs
                     }
                 } else {
                     System.out.println("Invalid input format. Each line must contain exactly 3 elements.");
@@ -98,8 +97,10 @@ public class TaskScheduler {
             }
         }
     }
+
     // Process Mode1 jobs (Task 1: based on processing time)
     private static void processMode1(MinHeap1 heap, String[] firstLineParts) {
+        System.out.println("Processing with Mode1");
         int count = 0;
 
         // Process the first job
@@ -129,38 +130,51 @@ public class TaskScheduler {
     }
 
     // Process Mode2 jobs (priority-based scheduling)
-    private static void processMode2(MinHeap2 heap, Mode1[] jobs, int count) {
-        for (int i = 0; i < count; i++) {
-            heap.insert(jobs[i]);  // Insert jobs into MinHeap2
+    private static void processMode2(MinHeap2 heap, Mode2[] jobs, int count) {
+        System.out.println("Processing with Mode2");
+
+        int totalCompletionTime = 0;  // Track total completion time across all jobs
+        int currentTime = 0;  // Track the current time across all jobs
+        StringBuilder executionOrder = new StringBuilder();  // To build the execution order output
+
+        // Insert and process jobs in priority order
+        int currentPriority = 1;  // Start with the highest priority (lowest number)
+
+        while (currentPriority <= 5) {  // Assuming priority ranges from 1 to 5
+            // Insert jobs of the current priority level into the heap
+            for (int i = 0; i < count; i++) {
+                if (jobs[i].priority == currentPriority) {
+                    heap.insert(jobs[i]);  // Insert only jobs of the current priority
+                }
+            }
+
+            // Process all jobs of the current priority level
+            while (!heap.isEmpty()) {
+                Mode2 job = heap.extractMin();  // Extract job with shortest processing time
+                currentTime += job.processingTime;  // Increase current time by the job's processing time
+                totalCompletionTime += currentTime;  // Add current time (completion time of the job) to total completion time
+                executionOrder.append(job.id).append(" ");  // Add job to execution order
+            }
+
+            // Move to the next priority level
+            currentPriority++;
         }
 
-        // Process jobs based on priority (MinHeap2)
-        int currentTime = 0;
-        int totalCompletionTime = 0;
-        StringBuilder executionOrder = new StringBuilder();
-
-        while (!heap.isEmpty()) {
-            Mode1 job = heap.extractMin();  // Extract job with highest priority
-            currentTime += job.processingTime;
-            totalCompletionTime += currentTime;
-            executionOrder.append(job.id).append(" ");
-        }
-
-        // Output results
-        System.out.println("Execution order: " + executionOrder.toString().trim());
-        System.out.println("Average completion time: " + (double) totalCompletionTime / count);
+        // Output the execution order and average completion time
+        System.out.println("Execution order: [" + executionOrder.toString().trim().replace(" ", ", ") + "]");
+        System.out.printf("Average completion time: %.1f\n", (double) totalCompletionTime / count);
     }
 
     // Process Mode3 jobs (arrival time-based scheduling)
-    private static void processMode3(MinHeap3 heap, Mode1[] jobs, int count) {
+    private static void processMode3(MinHeap3 heap, Mode3[] jobs, int count) {
+        System.out.println("Processing with Mode3");
+
         // Manual sorting of jobs based on arrival time
         for (int i = 0; i < count - 1; i++) {
             for (int j = i + 1; j < count; j++) {
-                Mode3 job1 = (Mode3) jobs[i];
-                Mode3 job2 = (Mode3) jobs[j];
-                if (job1.arrivalTime > job2.arrivalTime) {
+                if (jobs[i].arrivalTime > jobs[j].arrivalTime) {
                     // Swap jobs
-                    Mode1 temp = jobs[i];
+                    Mode3 temp = jobs[i];
                     jobs[i] = jobs[j];
                     jobs[j] = temp;
                 }
@@ -174,31 +188,32 @@ public class TaskScheduler {
 
         while (index < count || !heap.isEmpty()) {
             // Add jobs to the heap that have arrived by the current time
-            while (index < count && ((Mode3) jobs[index]).arrivalTime <= currentTime) {
+            while (index < count && jobs[index].arrivalTime <= currentTime) {
                 heap.insert(jobs[index]);
                 index++;
             }
 
             if (!heap.isEmpty()) {
                 // Extract the job with the shortest processing time
-                Mode3 job = (Mode3) heap.extractMin();
+                Mode3 job = heap.extractMin();
                 executionOrder.append(job.id).append(" ");
                 currentTime += job.processingTime;  // Simulate job running until completion
                 totalCompletionTime += currentTime;
             } else if (index < count) {
                 // If no jobs have arrived, jump to the next job's arrival time
-                currentTime = ((Mode3) jobs[index]).arrivalTime;
+                currentTime = jobs[index].arrivalTime;
             }
         }
 
         // Output results
         System.out.println("Execution order: [" + executionOrder.toString().trim().replace(" ", ", ") + "]");
-        System.out.println("Average completion time: " + (double) totalCompletionTime / count);
+        System.out.printf("Average completion time: %.1f\n", (double) totalCompletionTime / count);
     }
+
     // Process jobs for any heap type
     private static void processJobs(MinHeap1 heap, int count) {
-        int currentTime = 0;
-        int totalCompletionTime = 0;
+        double currentTime = 0.0;
+        double totalCompletionTime = 0.0;
         StringBuilder executionOrder = new StringBuilder();
 
         while (!heap.isEmpty()) {
@@ -210,6 +225,6 @@ public class TaskScheduler {
 
         // Output results
         System.out.println("Execution order: [" + executionOrder.toString().trim().replace(" ", ", ") + "]");
-        System.out.println("Average completion time: " + (double) totalCompletionTime / count);
+        System.out.println("Average completion time: " + totalCompletionTime / count);
     }
 }
