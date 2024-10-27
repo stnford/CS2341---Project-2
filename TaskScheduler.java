@@ -13,7 +13,7 @@ public class TaskScheduler {
         // Read the first line from StdIn
         if (!StdIn.isEmpty()) {
             String firstLine = StdIn.readLine().trim();
-            String[] firstLineParts = firstLine.split(" ");  // Split by spaces
+            String[] firstLineParts = firstLine.split(" ") ;  // Split by spaces
 
             int numElements = firstLineParts.length;
 
